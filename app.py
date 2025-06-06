@@ -2,68 +2,62 @@ import streamlit as st
 import pandas as pd
 import os
 from ia_modelo import prever_proximos_numeros_com_ia
-from utils import salvar_acerto
+from utils import salvar_acerto, carregar_resultados
 from streamlit_autorefresh import st_autorefresh
+
+# ✅ Configuração da página - DEVE SER A PRIMEIRA INSTRUÇÃO Streamlit
 st.set_page_config(page_title="XXXtreme Lightning Roulette", layout="centered")
 
-ARQUIVO = 'historico_resultados.csv'
-ACERTOS = 'acertos_previsao.csv'
-
+# ✅ Atualização automática a cada 15 segundos
 st_autorefresh(interval=15000, limit=None, key="auto-refresh")
 
+# ✅ Título
+st.title("🎰 XXXtreme Lightning Roulette - Monitoramento em Tempo Real")
 
-st.markdown("""
-    <style>
-    .main { padding-bottom: 100px; }
-    h1 { text-align: center; }
-    .highlight { font-size: 24px; font-weight: bold; color: green; text-align: center; }
-    footer {
-        position: fixed;
-        left: 0; bottom: 0; width: 100%;
-        background-color: #f0f0f5; text-align: center; padding: 10px;
-        font-size: 14px; color: #888;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# ✅ Caminho do arquivo de histórico
+CAMINHO_ARQUIVO = 'historico_resultados.txt'
 
-st.markdown("<h1>🎯 XXXtreme Lightning Roulette – Monitoramento em Tempo Real</h1>", unsafe_allow_html=True)
+# ✅ Carregar dados salvos
+df = carregar_resultados(CAMINHO_ARQUIVO)
 
-if os.path.exists(ARQUIVO):
-    df = pd.read_csv(ARQUIVO)
-    df = df.sort_values(by="timestamp", ascending=False).reset_index(drop=True)
+# ✅ Exibir últimos resultados capturados
+st.subheader("🧾 Últimos Resultados Capturados")
+if not df.empty:
+    ultimos = df.tail(10)[['numero', 'timestamp']]
+    st.dataframe(ultimos.rename(columns={'numero': 'Número Sorteado', 'timestamp': 'Horário'}), use_container_width=True)
+else:
+    st.info("Nenhum resultado ainda capturado.")
 
-    st.subheader("📊 Últimos Resultados Capturados")
-    st.dataframe(df.head(10), use_container_width=True)
+# ✅ IA: Prever próximos números
+st.subheader("🧠 Números Previstos pela IA")
+previsoes = prever_proximos_numeros_com_ia(CAMINHO_ARQUIVO, qtd=5)
 
-    st.subheader("🤖 Números previstos pela IA")
-    previsoes = prever_proximos_numeros_com_ia(ARQUIVO, qtd=5)
+if previsoes:
+    col1, col2 = st.columns([2, 3])
 
-    if previsoes:
-        col1, col2, col3 = st.columns(3)
-        for i, p in enumerate(previsoes):
-            col = [col1, col2, col3][i % 3]
-            col.markdown(f"<div class='highlight'>🎯 {p['numero']}</div>", unsafe_allow_html=True)
+    with col1:
+        st.markdown("🔮 **Previsões:**")
+        for prev in previsoes:
+            st.markdown(f"<span style='font-size: 24px; color: blue;'>{prev['numero']}</span>", unsafe_allow_html=True)
 
-        numero_real = int(df.iloc[0]['numero'])
-        timestamp_real = df.iloc[0]['timestamp']
-        acertos = [p['numero'] for p in previsoes if p['numero'] == numero_real]
+    with col2:
+        # Verificar se algum número previsto foi sorteado recentemente
+        ultimos_numeros = df['numero'].astype(int).tail(10).tolist()
+        acertos = [p for p in previsoes if p['numero'] in ultimos_numeros]
 
         if acertos:
-            st.success(f"✅ A IA acertou o número sorteado: {numero_real}")
-            salvar_acerto(numero_previsto=numero_real, numero_real=numero_real, timestamp=timestamp_real)
+            st.success(f"✅ **Acertos recentes da IA:** {[a['numero'] for a in acertos]}")
+            salvar_acerto(acertos)
         else:
-            st.info(f"🔍 Último número sorteado: {numero_real}")
-    else:
-        st.warning("Aguardando dados suficientes para previsão...")
+            st.warning("Nenhum acerto recente.")
 else:
-    st.warning("Arquivo de dados ainda não criado. Aguarde a coleta inicial.")
+    st.info("IA ainda não fez previsões.")
 
-if os.path.exists(ARQUIVO):
-    csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button("⬇️ Baixar resultados (.csv)", csv, file_name="resultados.csv", mime='text/csv')
+# ✅ Botão para download do histórico completo
+st.subheader("⬇️ Download do Histórico")
+with open(CAMINHO_ARQUIVO, "rb") as file:
+    st.download_button("📥 Baixar histórico de resultados", data=file, file_name="resultados.txt")
 
-st.markdown("""
-    <footer>
-        Monitoramento ao vivo da Roleta XXXtreme Lightning 🎲 Desenvolvido com ❤️
-    </footer>
-""", unsafe_allow_html=True)
+# ✅ Rodapé
+st.markdown("---")
+st.markdown("<center><small>App desenvolvido para monitorar e prever resultados da XXXtreme Lightning Roulette ⚡</small></center>", unsafe_allow_html=True)
