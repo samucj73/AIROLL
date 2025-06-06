@@ -21,9 +21,11 @@ if "historico" not in st.session_state:
 resultado = fetch_latest_result()
 novo = False
 
-if resultado:
+# if resultado:
     if resultado["timestamp"] not in st.session_state.historico["timestamp"].values:
         salvar_resultado_em_arquivo([resultado], caminho=CAMINHO_ARQUIVO)
+        if 'historico' not in st.session_state:
+    st.session_state.historico = pd.DataFrame(columns=["numero", "lucky_numbers", "timestamp"])
         st.session_state.historico = pd.concat([st.session_state.historico, pd.DataFrame([{
             "numero": resultado["number"],
             "lucky": ",".join(map(str, resultado["lucky_numbers"])),
