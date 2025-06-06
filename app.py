@@ -8,25 +8,19 @@ st.set_page_config(page_title="XXXtreme Lightning Roulette", layout="centered")
 
 CAMINHO_ARQUIVO = "historico_resultados.csv"
 
-st.title("🎯 XXXtreme Lightning Roulette com IA")
-st.caption("Monitoramento ao vivo com inteligência artificial.")
-
+# Carregar histórico
 if "historico" not in st.session_state:
     st.session_state.historico = carregar_resultados(CAMINHO_ARQUIVO)
 
 # Buscar novo resultado
 resultado = fetch_latest_result()
 
-# Verifica se é um novo número
+# Verifica se é um novo número ANTES de renderizar qualquer coisa
 if resultado:
     novo_timestamp = resultado["timestamp"]
-    historico_ts = st.session_state.historico["timestamp"].values
-
-    if novo_timestamp not in historico_ts:
-        # Salva novo resultado
+    if novo_timestamp not in st.session_state.historico["timestamp"].values:
+        # Salva e atualiza histórico
         salvar_resultado_em_arquivo([resultado], caminho=CAMINHO_ARQUIVO)
-
-        # Atualiza histórico em cache
         novo = pd.DataFrame([{
             "numero": resultado["number"],
             "timestamp": novo_timestamp,
@@ -34,8 +28,12 @@ if resultado:
         }])
         st.session_state.historico = pd.concat([st.session_state.historico, novo], ignore_index=True)
 
-        # Força refresh para atualizar visualmente a interface
+        # FORÇA REFRESH ANTES DE EXIBIR QUALQUER COISA
         st.experimental_rerun()
+
+# Agora sim: renderiza a interface
+st.title("🎯 XXXtreme Lightning Roulette com IA")
+st.caption("Monitoramento ao vivo com inteligência artificial.")
 
 # Previsões da IA
 st.subheader("🧠 Previsões de IA (últimos 300 registros)")
@@ -57,7 +55,7 @@ st.subheader("📈 Últimos 10 Resultados")
 
 recentes = st.session_state.historico.tail(10)[["numero", "timestamp"]].reset_index(drop=True)
 
-for i, row in recentes.iterrows():
+for _, row in recentes.iterrows():
     num = row["numero"]
     ts = row["timestamp"]
     if num in numeros_previstos:
