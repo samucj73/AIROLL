@@ -3,37 +3,40 @@ import pandas as pd
 from coleta import fetch_latest_result, salvar_resultado_em_arquivo
 from modelo_ia import prever_proximos_numeros_com_ia
 from utils import salvar_acerto, carregar_resultados
+from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="XXXtreme Lightning Roulette", layout="centered")
 
 CAMINHO_ARQUIVO = "historico_resultados.csv"
 
-# Carregar histórico
+# Inicializa o histórico na sessão
 if "historico" not in st.session_state:
     st.session_state.historico = carregar_resultados(CAMINHO_ARQUIVO)
 
-# Buscar novo resultado
+# Verifica novo resultado
 resultado = fetch_latest_result()
+novo_detectado = False
 
-# Verifica se é um novo número ANTES de renderizar qualquer coisa
 if resultado:
-    novo_timestamp = resultado["timestamp"]
-    if novo_timestamp not in st.session_state.historico["timestamp"].values:
-        # Salva e atualiza histórico
+    if resultado["timestamp"] not in st.session_state.historico["timestamp"].values:
         salvar_resultado_em_arquivo([resultado], caminho=CAMINHO_ARQUIVO)
         novo = pd.DataFrame([{
             "numero": resultado["number"],
-            "timestamp": novo_timestamp,
+            "timestamp": resultado["timestamp"],
             "lucky_numbers": ",".join(map(str, resultado["lucky_numbers"]))
         }])
         st.session_state.historico = pd.concat([st.session_state.historico, novo], ignore_index=True)
+        novo_detectado = True
 
-        # FORÇA REFRESH ANTES DE EXIBIR QUALQUER COISA
-        st.experimental_rerun()
+# Se um novo número foi detectado, forçamos um refresh
+if novo_detectado:
+    st_autorefresh(interval=100, key="forcar_refresh", limit=1)
+else:
+    st_autorefresh(interval=10_000, key="refresh_regular")
 
-# Agora sim: renderiza a interface
+# Interface
 st.title("🎯 XXXtreme Lightning Roulette com IA")
-st.caption("Monitoramento ao vivo com inteligência artificial.")
+st.caption("Monitoramento ao vivo com inteligência artificial e destaque de acertos.")
 
 # Previsões da IA
 st.subheader("🧠 Previsões de IA (últimos 300 registros)")
