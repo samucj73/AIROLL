@@ -4,13 +4,14 @@ import os
 from ia_modelo import prever_proximos_numeros_com_ia
 from utils import salvar_acerto
 from streamlit_autorefresh import st_autorefresh
+st.set_page_config(page_title="XXXtreme Lightning Roulette", layout="centered")
 
 ARQUIVO = 'historico_resultados.csv'
 ACERTOS = 'acertos_previsao.csv'
 
 st_autorefresh(interval=15000, limit=None, key="auto-refresh")
 
-st.set_page_config(page_title="XXXtreme Lightning Roulette", layout="centered")
+
 st.markdown("""
     <style>
     .main { padding-bottom: 100px; }
